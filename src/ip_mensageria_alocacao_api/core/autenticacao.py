@@ -17,7 +17,6 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-bq_client = make_bq_client()
 
 
 def verificar_senha(plain_password: str, senha_hash: str) -> bool:
@@ -36,7 +35,7 @@ def obter_usuario(usuario_nome: str | None) -> UsuarioNaBase | None:
         FROM `ip_mensageria_camada_ouro.usuarios_api_predicao`
         WHERE usuario = '{usuario_nome}'
     """
-    resultado_query = bq_client.query(query).result()
+    resultado_query = make_bq_client().query(query).result()
     if resultado_query.total_rows == 0:
         return None
     usuario_linha = next(resultado_query)
