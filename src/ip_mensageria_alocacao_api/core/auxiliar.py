@@ -22,8 +22,6 @@ from ip_mensageria_alocacao_api.core.modelos import (
     MensagemTipo,
 )
 
-bq_client = make_bq_client()
-
 
 def beta_from_mean_se(p: float, se: float, eps: float = 1e-6) -> Tuple[float, float]:
     """
@@ -63,7 +61,7 @@ def obter_caracteristicas_usuario(cidadao_id: str) -> CidadaoCaracteristicas:
         ON c.municipio_id_sus = m.cod_mun_ibge
         WHERE c.id = '{cidadao_id}'
     """
-    resultado_query = bq_client.query(query).result()
+    resultado_query = make_bq_client().query(query).result()
     assert resultado_query.total_rows == 1
     cidadao = next(resultado_query)
     return CidadaoCaracteristicas(
@@ -121,14 +119,14 @@ def obter_tempo_desde_ultimo_procedimento(
     """
 
     if linha_cuidado == LinhaCuidado.citotopatologico:
-        resultado_query = bq_client.query(query_cito).result()
+        resultado_query = make_bq_client().query(query_cito).result()
         assert resultado_query.total_rows == 1
         tempo_desde_ultimo_procedimento = next(
             resultado_query
         ).tempo_desde_ultimo_procedimento
     elif linha_cuidado == LinhaCuidado.cronicos:
-        resultado_query_diabetes = bq_client.query(query_diabetes).result()
-        resultado_query_hipertensao = bq_client.query(query_hipertensao).result()
+        resultado_query_diabetes = make_bq_client().query(query_diabetes).result()
+        resultado_query_hipertensao = make_bq_client().query(query_hipertensao).result()
         if isinstance(resultado_query_diabetes, RowIterator) and isinstance(
             resultado_query_hipertensao, RowIterator
         ):
@@ -236,7 +234,7 @@ def preparar_atributos_para_predicao(
 
 @lru_cache(maxsize=128)
 def obter_template_embedding_por_nome(template_nome: str) -> np.ndarray:
-    resultado_query = bq_client.query(f"""
+    resultado_query = make_bq_client().query(f"""
         SELECT embedding
         FROM `ip_mensageria_camada_prata.templates_embeddings`
         WHERE template_nome = '{template_nome}';
@@ -271,7 +269,7 @@ def obter_template_embedding_por_texto(
             botao2_texto or "",
         ]
     )
-    resultado_query = bq_client.query(f"""
+    resultado_query = make_bq_client().query(f"""
         SELECT embedding
         FROM `ip_mensageria_camada_prata.templates_embeddings`
         WHERE content = '{texto}'
@@ -280,7 +278,7 @@ def obter_template_embedding_por_texto(
         isinstance(resultado_query, _EmptyRowIterator)
         or resultado_query.total_rows == 0
     ):
-        resultado_query = bq_client.query(f"""
+        resultado_query = make_bq_client().query(f"""
             SELECT embedding
             FROM AI.GENERATE_EMBEDDING(
                 MODEL `modelos.multimodalembedding`,
@@ -304,13 +302,13 @@ def obter_template_embedding_por_texto(
 @lru_cache(maxsize=128)
 def obter_midia_embedding(url: Optional[AnyUrl]) -> np.ndarray:
     if str(url).startswith("gs://"):
-        resultado_query = bq_client.query(f"""
+        resultado_query = make_bq_client().query(f"""
             SELECT embedding
             FROM `ip_mensageria_camada_prata.templates_midias_embeddings`
             WHERE ref.uri = '{url}'
         """).result()
     elif str(url).startswith("http"):
-        resultado_query = bq_client.query(f"""
+        resultado_query = make_bq_client().query(f"""
             SELECT embedding
             FROM `{BQ_PROJETO}.ip_mensageria_camada_prata.templates_midias_embeddings` e
             INNER JOIN `{BQ_PROJETO}.ip_mensageria_camada_bronze.templates_midias` t
