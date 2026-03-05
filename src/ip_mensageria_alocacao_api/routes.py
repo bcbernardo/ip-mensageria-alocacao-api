@@ -16,6 +16,7 @@ from ip_mensageria_alocacao_api.core.autenticacao import (
     criar_token_acesso,
     obter_usuario_atual_via_api_key,
 )
+from ip_mensageria_alocacao_api.core.classificadores import carregar_classificadores
 from ip_mensageria_alocacao_api.core.modelos import (
     LinhaCuidado,
     Mensagem,
@@ -67,10 +68,29 @@ async def prever_efetividade_mensagem(
     linha_cuidado: LinhaCuidado,
     mensagem_tipo: MensagemTipo,
     mensagem: Mensagem,
+    request: Request,
     usuario: UsuarioNaBase = Depends(obter_usuario_atual_via_api_key),
-    request: Request = None,
 ) -> Predicao:
-    classificadores = request.app.state.classificadores
+    try:
+        classificadores = request.app.state.classificadores
+    except AttributeError:
+        try:
+            classificadores = carregar_classificadores()
+        except RuntimeError as exc:
+            logger.exception("Falha ao carregar classificadores")
+            raise HTTPException(
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+                detail=str(exc),
+            ) from exc
+        except Exception as exc:
+            logger.exception("Falha inesperada ao carregar classificadores")
+            raise HTTPException(
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+                detail="Classificadores indisponiveis no momento.",
+            ) from exc
+
+        request.app.state.classificadores = classificadores
+
     return prever_probabilidade_mensagem_ser_efetiva(
         cidadao_id=cidadao_id,
         linha_cuidado=linha_cuidado,

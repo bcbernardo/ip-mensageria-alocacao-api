@@ -169,8 +169,8 @@ def mock_query_result():
     return MockQueryResult
 
 
-@patch("ip_mensageria_alocacao_api.core.auxiliar.bq_client")
-def test_obter_caracteristicas_usuario(mock_bq_client):
+@patch("ip_mensageria_alocacao_api.core.auxiliar.make_bq_client")
+def test_obter_caracteristicas_usuario(mock_make_bq_client):
     mock_row = Mock(
         idade=30,
         sexo="Feminino",
@@ -181,7 +181,9 @@ def test_obter_caracteristicas_usuario(mock_bq_client):
     mock_result = MockResult([mock_row])
     mock_query = Mock()
     mock_query.result.return_value = mock_result
-    mock_bq_client.query.return_value = mock_query
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query
+    mock_make_bq_client.return_value = mock_client
 
     result = auxiliar.obter_caracteristicas_usuario("123")
 
@@ -193,13 +195,15 @@ def test_obter_caracteristicas_usuario(mock_bq_client):
     assert result.municipio_prop_domicilios_zona_rural == 0.12
 
 
-@patch("ip_mensageria_alocacao_api.core.auxiliar.bq_client")
-def test_obter_tempo_desde_ultimo_procedimento_citotopatologico(mock_bq_client):
+@patch("ip_mensageria_alocacao_api.core.auxiliar.make_bq_client")
+def test_obter_tempo_desde_ultimo_procedimento_citotopatologico(mock_make_bq_client):
     mock_row = Mock(tempo_desde_ultimo_procedimento=10)
     mock_result = MockResult([mock_row])
     mock_query = Mock()
     mock_query.result.return_value = mock_result
-    mock_bq_client.query.return_value = mock_query
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query
+    mock_make_bq_client.return_value = mock_client
 
     result = auxiliar.obter_tempo_desde_ultimo_procedimento(
         "123", modelos.LinhaCuidado.citotopatologico
@@ -208,8 +212,8 @@ def test_obter_tempo_desde_ultimo_procedimento_citotopatologico(mock_bq_client):
     assert result == 10
 
 
-@patch("ip_mensageria_alocacao_api.core.auxiliar.bq_client")
-def test_obter_tempo_desde_ultimo_procedimento_cronicos(mock_bq_client):
+@patch("ip_mensageria_alocacao_api.core.auxiliar.make_bq_client")
+def test_obter_tempo_desde_ultimo_procedimento_cronicos(mock_make_bq_client):
     mock_result_diabetes = MockResult([Mock(tempo_desde_ultimo_procedimento=20)])
     mock_result_hipertensao = MockResult([Mock(tempo_desde_ultimo_procedimento=15)])
 
@@ -219,7 +223,9 @@ def test_obter_tempo_desde_ultimo_procedimento_cronicos(mock_bq_client):
     mock_query_hipertensao = Mock()
     mock_query_hipertensao.result.return_value = mock_result_hipertensao
 
-    mock_bq_client.query.side_effect = [mock_query_diabetes, mock_query_hipertensao]
+    mock_client = Mock()
+    mock_client.query.side_effect = [mock_query_diabetes, mock_query_hipertensao]
+    mock_make_bq_client.return_value = mock_client
 
     # Need to patch isinstance to recognize MockResult as RowIterator
     with patch(
@@ -240,13 +246,15 @@ def test_obter_tempo_desde_ultimo_procedimento_cronicos(mock_bq_client):
     assert result == 15  # min of 20 and 15
 
 
-@patch("ip_mensageria_alocacao_api.core.auxiliar.bq_client")
-def test_obter_template_embedding_por_nome_success(mock_bq_client):
+@patch("ip_mensageria_alocacao_api.core.auxiliar.make_bq_client")
+def test_obter_template_embedding_por_nome_success(mock_make_bq_client):
     mock_row = Mock(embedding=[0.1, 0.2, 0.3])
     mock_result = MockResult([mock_row])
     mock_query = Mock()
     mock_query.result.return_value = mock_result
-    mock_bq_client.query.return_value = mock_query
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query
+    mock_make_bq_client.return_value = mock_client
 
     result = auxiliar.obter_template_embedding_por_nome("template1")
 
@@ -254,18 +262,20 @@ def test_obter_template_embedding_por_nome_success(mock_bq_client):
     assert np.array_equal(result, np.array([0.1, 0.2, 0.3]))
 
 
-@patch("ip_mensageria_alocacao_api.core.auxiliar.bq_client")
-def test_obter_template_embedding_por_nome_not_found(mock_bq_client):
+@patch("ip_mensageria_alocacao_api.core.auxiliar.make_bq_client")
+def test_obter_template_embedding_por_nome_not_found(mock_make_bq_client):
     mock_query = Mock()
     mock_query.result.return_value = _EmptyRowIterator()
-    mock_bq_client.query.return_value = mock_query
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query
+    mock_make_bq_client.return_value = mock_client
 
     with pytest.raises(HTTPException):
         auxiliar.obter_template_embedding_por_nome("nonexistent")
 
 
-@patch("ip_mensageria_alocacao_api.core.auxiliar.bq_client")
-def test_obter_template_embedding_por_texto_cached(mock_bq_client):
+@patch("ip_mensageria_alocacao_api.core.auxiliar.make_bq_client")
+def test_obter_template_embedding_por_texto_cached(mock_make_bq_client):
     # First query returns empty result
     mock_empty = _EmptyRowIterator()
     # Second query returns result with embedding
@@ -274,42 +284,48 @@ def test_obter_template_embedding_por_texto_cached(mock_bq_client):
     mock_query_with_result = Mock()
     mock_query_with_result.result.return_value = mock_result
 
-    # Set up the mock to return _EmptyRowIterator on first call, then query with result on second call
-    mock_bq_client.query.side_effect = [mock_empty, mock_query_with_result]
+    # Set up the mock to return empty result on first call, then query with result on second call
+    mock_client = Mock()
+    mock_client.query.side_effect = [mock_empty, mock_query_with_result]
+    mock_make_bq_client.return_value = mock_client
 
     result = auxiliar.obter_template_embedding_por_texto("text", "btn0", "btn1", "btn2")
 
     assert isinstance(result, np.ndarray)
 
 
-@patch("ip_mensageria_alocacao_api.core.auxiliar.bq_client")
-def test_obter_midia_embedding_gs(mock_bq_client):
+@patch("ip_mensageria_alocacao_api.core.auxiliar.make_bq_client")
+def test_obter_midia_embedding_gs(mock_make_bq_client):
     mock_row = Mock(embedding=[0.7, 0.8])
     mock_result = MockResult([mock_row])
     mock_query = Mock()
     mock_query.result.return_value = mock_result
-    mock_bq_client.query.return_value = mock_query
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query
+    mock_make_bq_client.return_value = mock_client
 
     result = auxiliar.obter_midia_embedding("gs://bucket/file.jpg")
 
     assert isinstance(result, np.ndarray)
 
 
-@patch("ip_mensageria_alocacao_api.core.auxiliar.bq_client")
-def test_obter_midia_embedding_http(mock_bq_client):
+@patch("ip_mensageria_alocacao_api.core.auxiliar.make_bq_client")
+def test_obter_midia_embedding_http(mock_make_bq_client):
     mock_row = Mock(embedding=[0.9, 1.0])
     mock_result = MockResult([mock_row])
     mock_query = Mock()
     mock_query.result.return_value = mock_result
-    mock_bq_client.query.return_value = mock_query
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query
+    mock_make_bq_client.return_value = mock_client
 
     result = auxiliar.obter_midia_embedding("http://example.com/image.jpg")
 
     assert isinstance(result, np.ndarray)
 
 
-@patch("ip_mensageria_alocacao_api.core.auxiliar.bq_client")
-def test_obter_midia_embedding_invalid_url(mock_bq_client):
+@patch("ip_mensageria_alocacao_api.core.auxiliar.make_bq_client")
+def test_obter_midia_embedding_invalid_url(mock_make_bq_client):
     with pytest.raises(HTTPException):  # HTTPException
         auxiliar.obter_midia_embedding("ftp://invalid.com/file.jpg")
 

@@ -43,8 +43,13 @@ def test_obter_usuario_success(monkeypatch):
     mock_result = MockResult([mock_row])
     mock_query_job = Mock()
     mock_query_job.result.return_value = mock_result
-    mock_query = Mock(return_value=mock_query_job)
-    monkeypatch.setattr(autenticacao.bq_client, "query", mock_query)
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query_job
+    monkeypatch.setattr(
+        autenticacao,
+        "make_bq_client",
+        Mock(return_value=mock_client),
+    )
 
     user = autenticacao.obter_usuario("testuser")
     assert user.usuario_nome == "testuser"
@@ -56,8 +61,13 @@ def test_obter_usuario_not_found(monkeypatch):
     mock_result = MockResult([])
     mock_query_job = Mock()
     mock_query_job.result.return_value = mock_result
-    mock_query = Mock(return_value=mock_query_job)
-    monkeypatch.setattr(autenticacao.bq_client, "query", mock_query)
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query_job
+    monkeypatch.setattr(
+        autenticacao,
+        "make_bq_client",
+        Mock(return_value=mock_client),
+    )
 
     user = autenticacao.obter_usuario("nonexistent")
     assert user is None
@@ -76,8 +86,13 @@ def test_autenticar_usuario_success(monkeypatch):
     mock_result = MockResult([mock_row])
     mock_query_job = Mock()
     mock_query_job.result.return_value = mock_result
-    mock_query = Mock(return_value=mock_query_job)
-    monkeypatch.setattr(autenticacao.bq_client, "query", mock_query)
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query_job
+    monkeypatch.setattr(
+        autenticacao,
+        "make_bq_client",
+        Mock(return_value=mock_client),
+    )
 
     user = autenticacao.autenticar_usuario("testuser", "password")
     assert user.usuario_nome == "testuser"
@@ -91,8 +106,13 @@ def test_autenticar_usuario_wrong_password(monkeypatch):
     mock_result = MockResult([mock_row])
     mock_query_job = Mock()
     mock_query_job.result.return_value = mock_result
-    mock_query = Mock(return_value=mock_query_job)
-    monkeypatch.setattr(autenticacao.bq_client, "query", mock_query)
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query_job
+    monkeypatch.setattr(
+        autenticacao,
+        "make_bq_client",
+        Mock(return_value=mock_client),
+    )
 
     user = autenticacao.autenticar_usuario("testuser", "wrong")
     assert user is False
@@ -102,8 +122,13 @@ def test_autenticar_usuario_nao_encontrado(monkeypatch):
     mock_result = MockResult([])
     mock_query_job = Mock()
     mock_query_job.result.return_value = mock_result
-    mock_query = Mock(return_value=mock_query_job)
-    monkeypatch.setattr(autenticacao.bq_client, "query", mock_query)
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query_job
+    monkeypatch.setattr(
+        autenticacao,
+        "make_bq_client",
+        Mock(return_value=mock_client),
+    )
 
     user = autenticacao.autenticar_usuario("nonexistent", "password")
     assert user is False
@@ -133,8 +158,13 @@ async def test_login_para_token_successo(monkeypatch):
     mock_result = MockResult([mock_row])
     mock_query_job = Mock()
     mock_query_job.result.return_value = mock_result
-    mock_query = Mock(return_value=mock_query_job)
-    monkeypatch.setattr(autenticacao.bq_client, "query", mock_query)
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query_job
+    monkeypatch.setattr(
+        autenticacao,
+        "make_bq_client",
+        Mock(return_value=mock_client),
+    )
 
     from fastapi.security import OAuth2PasswordRequestForm
 
@@ -151,8 +181,13 @@ async def test_login_para_token_falha(monkeypatch):
     mock_result = MockResult([])
     mock_query_job = Mock()
     mock_query_job.result.return_value = mock_result
-    mock_query = Mock(return_value=mock_query_job)
-    monkeypatch.setattr(autenticacao.bq_client, "query", mock_query)
+    mock_client = Mock()
+    mock_client.query.return_value = mock_query_job
+    monkeypatch.setattr(
+        autenticacao,
+        "make_bq_client",
+        Mock(return_value=mock_client),
+    )
 
     from fastapi.security import OAuth2PasswordRequestForm
 

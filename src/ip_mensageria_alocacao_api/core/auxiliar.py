@@ -234,11 +234,15 @@ def preparar_atributos_para_predicao(
 
 @lru_cache(maxsize=128)
 def obter_template_embedding_por_nome(template_nome: str) -> np.ndarray:
-    resultado_query = make_bq_client().query(f"""
+    resultado_query = (
+        make_bq_client()
+        .query(f"""
         SELECT embedding
         FROM `ip_mensageria_camada_prata.templates_embeddings`
         WHERE template_nome = '{template_nome}';
-    """).result()
+    """)
+        .result()
+    )
     if (
         not isinstance(resultado_query, _EmptyRowIterator)
         and resultado_query.total_rows > 0
@@ -278,14 +282,18 @@ def obter_template_embedding_por_texto(
         isinstance(resultado_query, _EmptyRowIterator)
         or resultado_query.total_rows == 0
     ):
-        resultado_query = make_bq_client().query(f"""
+        resultado_query = (
+            make_bq_client()
+            .query(f"""
             SELECT embedding
             FROM AI.GENERATE_EMBEDDING(
                 MODEL `modelos.multimodalembedding`,
                 (SELECT '{texto}' as content),
                 STRUCT(128 AS output_dimensionality)
             );
-        """).result()
+        """)
+            .result()
+        )
         if (
             isinstance(resultado_query, _EmptyRowIterator)
             or resultado_query.total_rows == 0
@@ -302,19 +310,27 @@ def obter_template_embedding_por_texto(
 @lru_cache(maxsize=128)
 def obter_midia_embedding(url: Optional[AnyUrl]) -> np.ndarray:
     if str(url).startswith("gs://"):
-        resultado_query = make_bq_client().query(f"""
+        resultado_query = (
+            make_bq_client()
+            .query(f"""
             SELECT embedding
             FROM `ip_mensageria_camada_prata.templates_midias_embeddings`
             WHERE ref.uri = '{url}'
-        """).result()
+        """)
+            .result()
+        )
     elif str(url).startswith("http"):
-        resultado_query = make_bq_client().query(f"""
+        resultado_query = (
+            make_bq_client()
+            .query(f"""
             SELECT embedding
             FROM `{BQ_PROJETO}.ip_mensageria_camada_prata.templates_midias_embeddings` e
             INNER JOIN `{BQ_PROJETO}.ip_mensageria_camada_bronze.templates_midias` t
                 ON REGEXP_REPLACE(t.gcs_referencia.uri, r'ip-mensageria-turn-midias/ip-mensageria-turn-midias/o/', 'ip-mensageria-turn-midias/') = e.ref.uri
             WHERE t.url_turn = '{url}'
-        """).result()
+        """)
+            .result()
+        )
     else:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,

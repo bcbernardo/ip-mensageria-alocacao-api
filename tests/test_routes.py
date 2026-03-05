@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from ip_mensageria_alocacao_api.core.autenticacao import obter_usuario_atual_via_api_key
 from ip_mensageria_alocacao_api.core.modelos import UsuarioNaBase
 from ip_mensageria_alocacao_api.main import create_app
 
@@ -10,7 +11,7 @@ from ip_mensageria_alocacao_api.main import create_app
 @pytest.fixture
 def client():
     """Create test client with mock classificadores."""
-    app = create_app()
+    app = create_app(carregar_classificadores_na_inicializacao=False)
     # Mock classificadores to avoid GCS dependency
     app.state.classificadores = Mock()
     app.state.classificadores.modelos = [Mock()]
@@ -72,13 +73,27 @@ def test_alocar_missing_auth(client):
 
 
 def test_prever_efetividade_missing_classificadores():
-    """Test prediction fails when classificadores not set in app state."""
-    app = create_app()
-    # Remove classificadores from app state
-    if hasattr(app.state, "classificadores"):
-        delattr(app.state, "classificadores")
+    """Test prediction returns 503 when lazy classifier load fails."""
+    app = create_app(carregar_classificadores_na_inicializacao=False)
+    app.dependency_overrides[obter_usuario_atual_via_api_key] = lambda: UsuarioNaBase(
+        usuario_nome="testuser", senha_hash="hash", desativado=False
+    )
 
     client = TestClient(app)
-    response = client.post("/prever_efetividade_mensagem", json={})
-    # This should fail with 500 or similar due to missing classificadores
-    assert response.status_code >= 400
+    with patch(
+        "ip_mensageria_alocacao_api.routes.carregar_classificadores",
+        side_effect=RuntimeError("credenciais ausentes"),
+    ):
+        response = client.post(
+            "/prever_efetividade_mensagem",
+            params={
+                "cidadao_id": "123",
+                "linha_cuidado": "crônicos",
+                "mensagem_tipo": "mensagem_inicial",
+            },
+            json={"dia_semana": "Monday", "horario": 10},
+            headers={"X-Api-Key": "fake"},
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "credenciais ausentes"
